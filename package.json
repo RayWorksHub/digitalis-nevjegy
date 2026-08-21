@@ -1,22 +1,32 @@
 {
-  "name": "digitalis-nevjegy",
-  "version": "0.1.0",
+  "name": "e-nevjegy",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "eslint ."
   },
   "dependencies": {
-    "next": "15.5.0",
-    "react": "19.1.1",
-    "react-dom": "19.1.1"
+    "@fontsource/dm-sans": "^5.2.6",
+    "@fontsource/manrope": "^5.2.6",
+    "@supabase/ssr": "^0.7.0",
+    "@supabase/supabase-js": "^2.57.4",
+    "lucide-react": "^0.468.0",
+    "next": "16.3.1",
+    "qrcode": "^1.5.4",
+    "react": "19.2.6",
+    "react-dom": "19.2.6",
+    "zod": "^3.24.1"
   },
   "devDependencies": {
-    "typescript": "^5.9.2",
-    "@types/node": "^22.17.2",
-    "@types/react": "^19.1.10",
-    "@types/react-dom": "^19.1.7"
+    "@types/node": "^22.19.19",
+    "@types/qrcode": "^1.5.5",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "eslint": "^9.39.4",
+    "eslint-config-next": "16.3.1",
+    "typescript": "^5.9.3"
   }
 }
