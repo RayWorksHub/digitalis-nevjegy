@@ -25,7 +25,9 @@ import {
 } from "lucide-react";
 import type { Profile, SocialLink } from "@/lib/types";
 import { APP_NAME } from "@/lib/constants";
+import { createProfileEntryUrl } from "@/lib/profile-entry-url";
 import { initials, safeUrl } from "@/lib/utils";
+import { SmartProfileImage } from "@/components/smart-profile-image";
 
 const socialIcons = {
   linkedin: Linkedin,
@@ -83,9 +85,10 @@ export function PublicProfileCard({ profile, profileUrl, ownerView = false }: { 
 
   useEffect(() => {
     if (!qrOpen || qrUrl) return;
+    const qrEntryUrl = createProfileEntryUrl(profileUrl, "qr", window.location.origin);
     import("qrcode")
       .then(({ default: QRCode }) =>
-        QRCode.toDataURL(profileUrl, {
+        QRCode.toDataURL(qrEntryUrl, {
           width: 720,
           margin: 2,
           color: { dark: "#10233a", light: "#ffffff" },
@@ -127,7 +130,7 @@ export function PublicProfileCard({ profile, profileUrl, ownerView = false }: { 
 
         <div className="public-avatar-wrap">
           {profile.avatar_url ? (
-            <Image className="public-avatar" src={profile.avatar_url} alt={`${profile.display_name} profilképe`} width={132} height={132} priority />
+            <SmartProfileImage className="public-avatar" src={profile.avatar_url} alt={`${profile.display_name} profilképe vagy logója`} width={132} height={132} priority />
           ) : (
             <div className="public-avatar avatar-fallback" aria-hidden="true">{initials(profile.display_name)}</div>
           )}
@@ -179,6 +182,7 @@ export function PublicProfileCard({ profile, profileUrl, ownerView = false }: { 
             <div className="qr-image-wrap">
               {qrUrl ? <Image src={qrUrl} alt="A névjegy QR-kódja" width={280} height={280} unoptimized /> : <div className="qr-loading">QR-kód készül…</div>}
             </div>
+            <p className="qr-open-note">Beolvasás után ez a névjegyoldal nyílik meg; a telefon nem tölt le automatikusan kontaktfájlt.</p>
             <button className="button button-secondary button-full" type="button" onClick={copy}>
               {copied ? <Check size={18} /> : <Copy size={18} />} {copied ? "Hivatkozás másolva" : "Hivatkozás másolása"}
             </button>

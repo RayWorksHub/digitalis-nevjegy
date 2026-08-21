@@ -1,9 +1,9 @@
 "use client";
 
-import Image from "next/image";
-import { ChangeEvent, FormEvent, useMemo, useRef, useState } from "react";
+import { ChangeEvent, FormEvent, useCallback, useMemo, useRef, useState } from "react";
 import {
   Check,
+  Crop,
   Eye,
   EyeOff,
   GripVertical,
@@ -14,6 +14,12 @@ import {
   Trash2
 } from "lucide-react";
 import { MiniProfilePreview } from "@/components/mini-profile-preview";
+import {
+  createSquareProfileImage,
+  ProfileImageEditor,
+  type ProfileImageEditSettings
+} from "@/components/profile-image-editor";
+import { SmartProfileImage } from "@/components/smart-profile-image";
 import { emptyProfileInput, PUBLIC_HOST } from "@/lib/constants";
 import type { Profile, ProfileInput, SocialLink, SocialPlatform, ThemeName } from "@/lib/types";
 import { isDemoMode, normalizeSlug, safeUrl } from "@/lib/utils";
@@ -67,6 +73,8 @@ export function ProfileEditor({ initialProfile, email, fullName }: { initialProf
   });
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [preparingImage, setPreparingImage] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
@@ -140,28 +148,70 @@ export function ProfileEditor({ initialProfile, email, fullName }: { initialProf
     }
   };
 
-  const uploadAvatar = async (event: ChangeEvent<HTMLInputElement>) => {
+  const selectImage = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
+    event.target.value = "";
     if (!file) return;
     if (isDemoMode()) {
       setError("A képfeltöltés az éles tárhely összekötése után aktiválódik.");
       return;
     }
+
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      setError("Csak JPG, PNG vagy WebP kép választható.");
+      return;
+    }
+    if (file.size > 3 * 1024 * 1024) {
+      setError("A kiválasztott kép legfeljebb 3 MB lehet.");
+      return;
+    }
+
+    setMessage("");
+    setError("");
+    setSelectedImage(file);
+  };
+
+  const editCurrentImage = async () => {
+    if (!form.avatar_url || isDemoMode()) return;
+    setPreparingImage(true);
+    setError("");
+    setMessage("");
+
+    try {
+      const response = await fetch(form.avatar_url);
+      if (!response.ok) throw new Error("A jelenlegi kép nem tölthető be szerkesztésre.");
+      const blob = await response.blob();
+      if (!blob.type.startsWith("image/")) throw new Error("A jelenlegi fájl nem szerkeszthető képként.");
+      setSelectedImage(new File([blob], "jelenlegi-profilkep", { type: blob.type }));
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "A jelenlegi kép nem szerkeszthető.");
+    } finally {
+      setPreparingImage(false);
+    }
+  };
+
+  const closeImageEditor = useCallback(() => {
+    if (!uploading) setSelectedImage(null);
+  }, [uploading]);
+
+  const uploadEditedImage = async (settings: ProfileImageEditSettings) => {
+    if (!selectedImage) return;
     setUploading(true);
     setError("");
     try {
+      const editedImage = await createSquareProfileImage(selectedImage, settings);
       const data = new FormData();
-      data.append("file", file);
+      data.append("file", editedImage);
       const response = await fetch("/api/avatar", { method: "POST", body: data });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || "A kép nem tölthető fel.");
       update("avatar_url", payload.url);
-      setMessage("A profilkép feltöltve. A teljes profil mentéséhez kattints a Mentés gombra.");
+      setSelectedImage(null);
+      setMessage("A profilkép vagy logó szerkesztve és feltöltve. A teljes profil mentéséhez kattints a Mentés gombra.");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "A kép nem tölthető fel.");
     } finally {
       setUploading(false);
-      event.target.value = "";
     }
   };
 
@@ -184,9 +234,23 @@ export function ProfileEditor({ initialProfile, email, fullName }: { initialProf
             <div className="editor-panel-heading"><div><span>1</span><h2>Alapadatok</h2></div><p>Ezek jelennek meg legfelül a névjegyeden.</p></div>
             <div className="avatar-editor">
               <div className="avatar-editor-image">
-                {form.avatar_url ? <Image src={form.avatar_url} alt="Profilkép" width={88} height={88} /> : <ImagePlus size={28} />}
+                {form.avatar_url ? <SmartProfileImage src={form.avatar_url} alt="Profilkép vagy logó" width={88} height={88} className="avatar-editor-preview-image" /> : <ImagePlus size={28} />}
               </div>
-              <div><strong>Profilkép</strong><p>JPG, PNG vagy WebP, legfeljebb 3 MB.</p><button className="button button-secondary button-small" type="button" onClick={() => fileRef.current?.click()} disabled={uploading}>{uploading ? <Loader2 className="spin" size={16} /> : <ImagePlus size={16} />} Kép feltöltése</button><input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={uploadAvatar} hidden /></div>
+              <div className="avatar-editor-content">
+                <strong>Profilkép vagy céges logó</strong>
+                <p>JPG, PNG vagy WebP, legfeljebb 3 MB. A feltöltés előtt beállíthatod a vágást, az igazítást és a hátteret.</p>
+                <div className="avatar-editor-actions">
+                  <button className="button button-secondary button-small" type="button" onClick={() => fileRef.current?.click()} disabled={uploading || preparingImage}>
+                    <ImagePlus size={16} /> {form.avatar_url ? "Másik kép" : "Kép kiválasztása"}
+                  </button>
+                  {form.avatar_url ? (
+                    <button className="button button-secondary button-small" type="button" onClick={editCurrentImage} disabled={uploading || preparingImage}>
+                      {preparingImage ? <Loader2 className="spin" size={16} /> : <Crop size={16} />} Jelenlegi kép igazítása
+                    </button>
+                  ) : null}
+                </div>
+                <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={selectImage} hidden />
+              </div>
             </div>
             <div className="form-grid two">
               <label className="field"><span>Név *</span><span className="input-wrap"><input name="display_name" autoComplete="name" value={form.display_name} onChange={(e) => update("display_name", e.target.value)} maxLength={80} required /></span></label>
@@ -247,6 +311,15 @@ export function ProfileEditor({ initialProfile, email, fullName }: { initialProf
           {saving ? "Mentés folyamatban…" : saveComplete ? "Mentve" : currentProfile ? "Módosítások mentése" : "Profil létrehozása és mentése"}
         </button>
       </div>
+
+      {selectedImage ? (
+        <ProfileImageEditor
+          file={selectedImage}
+          uploading={uploading}
+          onCancel={closeImageEditor}
+          onApply={uploadEditedImage}
+        />
+      ) : null}
     </form>
   );
 }

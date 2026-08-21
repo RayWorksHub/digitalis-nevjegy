@@ -7,9 +7,10 @@
 - azonnali, megerősítő e-mail nélküli regisztráció és biztonságos belépés;
 - e-mailes jelszó-helyreállítás egyszer használható, lejáró hivatkozással;
 - saját, egyedi URL-en elérhető nyilvános profil;
-- QR-kód letöltés és böngészőből indítható Web NFC-írás;
+- QR-kód letöltés és böngészőből indítható Web NFC-írás, minden esetben a nyilvános profiloldalra mutató webcímmel;
 - vCard kapcsolatmentés, telefon-, e-mail- és webes gyorsműveletek;
-- profilkép, közösségi hivatkozások, négy megjelenési téma;
+- profilkép- és logószerkesztő teljes-kép/kitöltés móddal, igazítással, nagyítással és háttérszínnel;
+- nem négyzetes korábbi képek automatikus, vágásmentes megjelenítése, közösségi hivatkozások és négy megjelenési téma;
 - profilmegtekintés, mentés és kattintás analitika;
 - telepíthető PWA mobilos felülettel;
 - adatexport, profilrejtés és fióktörlés;
