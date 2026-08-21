@@ -1,0 +1,53 @@
+name: Import full e-nevjegy app
+
+on:
+  push:
+    branches:
+      - import-full-app-2026-08-21
+    paths:
+      - '.github/workflows/import-full-app.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout staging branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Rebuild and verify source archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat \
+            .import/source.part01 \
+            .import/source.part02 \
+            .import/source.part03 \
+            .import/source.part04-05 \
+            .import/source.part06-07 \
+            .import/source.part08-09 \
+            .import/source.part10-11 \
+            .import/source.part12 \
+            | tr -d '\r\n' | base64 -d > /tmp/source.tar.xz
+          echo 'abb2c0ad371ef297cbeb03239f5135dbaf330b4905d1bb2a6a0c43e99982a61a  /tmp/source.tar.xz' | sha256sum -c -
+          mkdir -p /tmp/full-source
+          tar -xJf /tmp/source.tar.xz -C /tmp/full-source
+
+      - name: Replace main with the full application
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git checkout -B main origin/main
+          git rm -r --ignore-unmatch .
+          cp -a /tmp/full-source/. .
+          git add -A
+          git config user.name 'RayWorks import bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git commit -m 'Import complete e-nevjegy web application'
+          git push origin main
