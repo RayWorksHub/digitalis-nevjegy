@@ -2259,8 +2259,10 @@ img {
 }
 
 .public-save-button {
+  width: 100%;
   min-height: 52px;
   margin-top: 12px;
+  border: 0;
   border-radius: 15px;
   display: flex;
   align-items: center;
@@ -2268,6 +2270,8 @@ img {
   gap: 9px;
   background: var(--profile-accent);
   color: #10233a;
+  cursor: pointer;
+  font: inherit;
   font-weight: 800;
   box-shadow: 0 12px 24px color-mix(in srgb, var(--profile-accent), transparent 75%);
 }
@@ -2363,6 +2367,23 @@ img {
   place-items: center;
   background: rgba(4, 17, 28, 0.72);
   backdrop-filter: blur(8px);
+}
+
+.contact-help-modal {
+  display: none;
+}
+
+.contact-help-modal:target {
+  display: grid;
+}
+
+.contact-help-backdrop-close {
+  position: absolute;
+  inset: 0;
+}
+
+.contact-help-modal .qr-modal {
+  z-index: 1;
 }
 
 .qr-modal {

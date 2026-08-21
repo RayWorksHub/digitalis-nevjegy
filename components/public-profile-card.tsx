@@ -8,7 +8,6 @@ import {
   ArrowLeft,
   Check,
   Copy,
-  Download,
   ExternalLink,
   Facebook,
   Github,
@@ -20,13 +19,15 @@ import {
   Phone,
   QrCode,
   Share2,
+  UserPlus,
   X,
   Youtube
 } from "lucide-react";
 import type { Profile, SocialLink } from "@/lib/types";
 import { APP_NAME } from "@/lib/constants";
+import { createAndroidContactIntent, createContactSummary, isAndroidUserAgent } from "@/lib/android-contact-intent";
 import { createProfileEntryUrl } from "@/lib/profile-entry-url";
-import { initials, safeUrl } from "@/lib/utils";
+import { createVCard, initials, normalizeSlug, safeUrl } from "@/lib/utils";
 import { SmartProfileImage } from "@/components/smart-profile-image";
 
 const socialIcons = {
@@ -73,6 +74,7 @@ export function PublicProfileCard({ profile, profileUrl, ownerView = false }: { 
   const [qrOpen, setQrOpen] = useState(false);
   const [qrUrl, setQrUrl] = useState("");
   const [copied, setCopied] = useState(false);
+  const [contactMessage, setContactMessage] = useState("");
 
   const visibleSocials = useMemo(
     () => profile.social_links.filter((link) => link.enabled).sort((a, b) => a.sort_order - b.sort_order),
@@ -116,6 +118,39 @@ export function PublicProfileCard({ profile, profileUrl, ownerView = false }: { 
     setTimeout(() => setCopied(false), 1800);
   };
 
+  const saveContact = () => {
+    track(profile.id, "save", "Kapcsolat mentése");
+
+    if (isAndroidUserAgent(navigator.userAgent)) {
+      const fallbackUrl = new URL(`/${profile.slug}`, window.location.origin);
+      fallbackUrl.hash = "contact-help";
+      window.location.href = createAndroidContactIntent(profile, fallbackUrl.toString());
+      return;
+    }
+
+    window.location.href = new URL(`/${profile.slug}/vcard`, window.location.origin).toString();
+  };
+
+  const shareContactFile = async () => {
+    setContactMessage("");
+    const filename = `${normalizeSlug(profile.display_name) || "kapcsolat"}.vcf`;
+    const file = new File([createVCard(profile)], filename, { type: "text/vcard" });
+
+    try {
+      if (navigator.share && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: `${profile.display_name} névjegye` });
+        setContactMessage("A kontakt átadva a telefon megosztási menüjének.");
+        return;
+      }
+
+      await navigator.clipboard.writeText(createContactSummary(profile));
+      setContactMessage("A telefon nem támogatja a kontakt átadását, ezért az adatok a vágólapra kerültek.");
+    } catch (caught) {
+      if (caught instanceof DOMException && caught.name === "AbortError") return;
+      setContactMessage("A telefon nem engedte átadni a kontaktot. Próbáld újra a Névjegyek alkalmazást kiválasztva.");
+    }
+  };
+
   return (
     <>
       <article className="public-card">
@@ -148,9 +183,9 @@ export function PublicProfileCard({ profile, profileUrl, ownerView = false }: { 
           {profile.website && <a href={safeUrl(profile.website)} target="_blank" rel="noreferrer" onClick={() => track(profile.id, "website", "Weboldal")}><Globe2 size={20} /><span>Weboldal</span></a>}
         </div>
 
-        <a className="public-save-button" href={`/${profile.slug}/vcard`} onClick={() => track(profile.id, "save", "Kapcsolat mentése")}>
-          <Download size={19} /> Kapcsolat mentése
-        </a>
+        <button className="public-save-button" type="button" onClick={saveContact}>
+          <UserPlus size={19} /> Kapcsolat mentése
+        </button>
 
         {profile.bio && <p className="public-bio">{profile.bio}</p>}
 
@@ -189,6 +224,20 @@ export function PublicProfileCard({ profile, profileUrl, ownerView = false }: { 
           </section>
         </div>
       )}
+
+      <div id="contact-help" className="modal-backdrop contact-help-modal" role="presentation">
+        <a className="contact-help-backdrop-close" href={`/${profile.slug}`} aria-label="Bezárás" />
+        <section className="qr-modal" role="dialog" aria-modal="true" aria-labelledby="contact-help-title">
+          <a className="modal-close" href={`/${profile.slug}`} aria-label="Bezárás"><X size={20} /></a>
+          <span className="eyebrow">Android névjegymentés</span>
+          <h2 id="contact-help-title">Mentés a Névjegyek alkalmazásba</h2>
+          <p>A böngésző nem tudta közvetlenül megnyitni a névjegyszerkesztőt. A következő gomb nem tölt le fájlt: a megosztási menüben válaszd a Névjegyek alkalmazást.</p>
+          <button className="button button-primary button-full" type="button" onClick={shareContactFile}>
+            <UserPlus size={18} /> Névjegyek kiválasztása
+          </button>
+          {contactMessage ? <p className="form-message success" role="status">{contactMessage}</p> : null}
+        </section>
+      </div>
     </>
   );
 }

@@ -8,6 +8,7 @@
 - e-mailes jelszó-helyreállítás egyszer használható, lejáró hivatkozással;
 - saját, egyedi URL-en elérhető nyilvános profil;
 - QR-kód letöltés és böngészőből indítható Web NFC-írás, minden esetben a nyilvános profiloldalra mutató webcímmel;
+- Androidon közvetlen Névjegyek-létrehozó képernyő, fájlletöltés nélküli natív megosztási tartalékkal;
 - vCard kapcsolatmentés, telefon-, e-mail- és webes gyorsműveletek;
 - profilkép- és logószerkesztő teljes-kép/kitöltés móddal, igazítással, nagyítással és háttérszínnel;
 - nem négyzetes korábbi képek automatikus, vágásmentes megjelenítése, közösségi hivatkozások és négy megjelenési téma;
